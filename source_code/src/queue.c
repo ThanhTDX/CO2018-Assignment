@@ -45,7 +45,7 @@ struct pcb_t * dequeue(struct queue_t * q) {
 	 * in the queue [q] and remember to remove it from q
 	 * */
 	if (empty(q)) return NULL;
-	struct pcb_t *proc = q->proc[0];
+	struct pcb_t *result = q->proc[0];
 
 	//Shifting processes to the left
 	for (int i = 0; i < q->size - 1; i++)
@@ -53,6 +53,6 @@ struct pcb_t * dequeue(struct queue_t * q) {
 		q->proc[i] = q->proc[i+1];
 	}
 	q->size -= 1;
-	return proc;
+	return result;
 }
 

@@ -16,11 +16,13 @@ static struct {
 } _mem_stat [NUM_PAGES];
 
 static pthread_mutex_t mem_lock;
+static pthread_mutex_t ram_lock;
 
 void init_mem(void) {
 	memset(_mem_stat, 0, sizeof(*_mem_stat) * NUM_PAGES);
 	memset(_ram, 0, sizeof(BYTE) * RAM_SIZE);
 	pthread_mutex_init(&mem_lock, NULL);
+    pthread_mutex_init(&ram_lock, NULL);
 }
 
 /* get offset of the virtual address */
@@ -89,9 +91,9 @@ static int translate(
 			 * to [p_index] field of page_table->table[i] to 
 			 * produce the correct physical address and save it to
 			 * [*physical_addr]  */
-			return 1;
 			addr_t physical_index = page_table->table[i].p_index;
 			*physical_addr = (physical_index << OFFSET_LEN) | (offset);
+            return 1;
 		}
 	}
 	return 0;	
@@ -208,9 +210,11 @@ int free_mem(addr_t address, struct pcb_t *proc)
     addr_t v_address = address; // Virtual address to free in process
 
     // * Valid virtual address or not
-    if (translate(v_address, &p_address, proc) == 0)
-        return 1; // Not valid
-
+    if (!translate(v_address, &p_address, proc))
+	{
+		pthread_mutex_unlock(&mem_lock);
+		return 1;
+	}
     // * Clear physical page in memmory
     addr_t p_segment_page_index = p_address >> OFFSET_LEN;
     int num_pages = 0; // Number of pages in list
@@ -227,8 +231,8 @@ int free_mem(addr_t address, struct pcb_t *proc)
         addr_t v_segment = get_first_lv(v_addr);
         addr_t v_page = get_second_lv(v_addr);
         struct page_table_t *page_table = get_page_table(v_segment, proc->seg_table);
-
-        for (int j = 0; j < page_table->size; j++)
+        int j;
+        for ( j = 0; j < page_table->size; j++)
         {
             if (page_table->table[j].v_index == v_page)
             {
@@ -251,7 +255,7 @@ int free_mem(addr_t address, struct pcb_t *proc)
                         seg_table->table[z] = seg_table->table[last_index_page_table];
                         seg_table->table[last_index_page_table].v_index = 0;
                         free(seg_table->table[last_index_page_table].pages);
-                        seg_table->size = seg_table->size - 1;
+                        seg_table->size--;
                     }
                 }
             }
@@ -288,7 +292,6 @@ int free_mem(addr_t address, struct pcb_t *proc)
                 break;
         }
     }
-
     pthread_mutex_unlock(&mem_lock);
     return 0;
 }
@@ -338,5 +341,3 @@ void dump(void) {
 		}
 	}
 }
-
-

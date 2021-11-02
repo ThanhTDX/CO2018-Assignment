@@ -8,7 +8,3 @@ Requirements:
 - Synchonization (Lock, Semaphore, Condition variables)
 
 Knowledge regarding requirements can be found in "Lectures" folder
-
-Latex report: https://www.overleaf.com/9438575626ckxgsbjpcdhj
-
-Deadline: 6/6/2021
